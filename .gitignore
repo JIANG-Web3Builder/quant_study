@@ -1,1 +1,7 @@
 .venv/
+__pycache__/
+.pytest_cache/
+ORB_strategy/tmp/
+ORB_strategy/**/__pycache__/
+ORB_strategy/data/
+ORB_strategy/results/
