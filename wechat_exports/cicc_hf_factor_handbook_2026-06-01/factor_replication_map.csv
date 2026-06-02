@@ -1,0 +1,10 @@
+﻿category,key_factor_names,data_needed,replication_hint
+"动量反转","mmt_ols_beta_mean_o;mmt_last30_std;mmt_pm_std;mmt_top20VolumeRet_o;mmt_top20VolumeRet_std","分钟K线/收益序列/成交量排名K线","文中强调 QRS/OLS beta、尾段动量和高成交量K线收益类因子。"
+"波动率","vol_upVol_std;vol_volume1min_o;vol_return1min_o;vol_range1min_std;vol_downRatio_o","分钟K线收益、成交量和振幅","上行波动率类在多个股票池更稳，方向多为高波动低未来收益。"
+"高阶特征","shape_skew_m;shape_skew_std;shape_kurt_std","分钟收益分布","偏度、峰度刻画日内收益分布形状。"
+"流动性","liq_amihud_1min_o;liq_spread_std;liq_closevol_z;liq_firstCallR_o;liq_firstCallR_m","1分钟K线、tick/集合竞价量、价差深度","价格弹性和集合竞价量占比两条线。"
+"量价相关性","corr_pvl_std;corr_pvl_m;corr_pv_std;corr_prv_std;corr_prvr_std","分钟收盘价/收益率/成交量及其滞后","价量同步和领先滞后相关系数。"
+"筹码分布","doc_vol_pdf90_std;doc_vol_pdf95_std;doc_vol_pdf80_std;doc_skew_std;doc_vol10_ratio_o","成交量按收益/价格分布后的筹码形态","分位盈亏和筹码占比优于纯形状因子。"
+"拥挤度","crowd_fftv20_3s_w0_std;crowd_fftv50m10_std;crowd_origin_v50_std;tv50m5_std","30s或3s快照成交量序列","傅里叶变换捕捉拆单周期性，表征机构参与度/拥挤度。"
+"资金流","trade_headRatio_std;trade_top20retRatio_m;trade_top20retRatio;trade_CSellRatio_z;trade_CBuyRatio_z","逐笔成交/委托、开盘尾盘成交、收益率成交占比","跟踪聪明资金流向；开盘资金和高收益成交占比更突出。"
+"复合因子","syn_corr_o;syn_crowd_o;syn_mmt_o","上述单类因子标准化后合成","文中月度更看好相关性/拥挤度复合，周度更看好拥挤度/动量复合。"
