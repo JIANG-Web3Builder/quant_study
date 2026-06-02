@@ -1,0 +1,6 @@
+pandas
+PyYAML
+matplotlib
+exchange-calendars
+pytest
+tabulate
