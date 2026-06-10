@@ -34,6 +34,7 @@ def base_config(**overrides) -> OrbConfig:
         "commission": 0.0005,
         "atr_period": 14,
         "stop_atr": 0.05,
+        "target_r_hl": 10.0,
     }
     values.update(overrides)
     return OrbConfig(**values)
@@ -64,8 +65,8 @@ def test_hl_long_uses_nth_bar_direction_and_enters_next_open():
     assert row["shares"] == 35
     assert row["exit_reason"] == "close"
     assert row["gross_pnl"] == 70.0
-    assert row["fees"] == 3.745
-    assert row["pnl"] == 66.255
+    assert row["fees"] == 0.035
+    assert row["pnl"] == 69.965
 
 
 def test_hl_short_uses_opening_range_high_as_stop():
@@ -89,8 +90,8 @@ def test_hl_short_uses_opening_range_high_as_stop():
     assert row["stop_price"] == 101.0
     assert row["exit_reason"] == "close"
     assert row["gross_pnl"] == 105.0
-    assert row["fees"] == 3.2375
-    assert row["pnl"] == 101.7625
+    assert row["fees"] == 0.035
+    assert row["pnl"] == 104.965
 
 
 def test_atr_stop_skips_day_when_lookup_missing():
@@ -132,3 +133,181 @@ def test_position_size_is_capped_by_max_leverage():
     )
 
     assert result.iloc[0]["shares"] == 250
+
+
+def test_commission_is_per_share_round_trip_not_notional():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 101.0, 99.0, 100.5),
+            ("09:31", 101.0, 102.0, 100.0, 101.5),
+            ("09:32", 102.0, 103.0, 101.0, 102.5),
+            ("09:33", 103.0, 104.0, 102.0, 103.5),
+            ("09:34", 104.0, 105.0, 103.0, 104.5),
+            ("09:35", 106.0, 108.0, 104.0, 107.0),
+            ("09:36", 107.0, 109.0, 106.0, 108.0),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(), stop_type="HL")
+
+    assert result.iloc[0]["shares"] == 35
+    assert result.iloc[0]["fees"] == 0.035
+
+
+def test_hl_long_exits_at_target_before_later_stop():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 100.1, 99.0, 100.2),
+            ("09:31", 100.2, 100.3, 99.5, 100.4),
+            ("09:32", 100.4, 100.5, 99.7, 100.6),
+            ("09:33", 100.6, 100.7, 99.8, 100.8),
+            ("09:34", 100.8, 100.9, 99.9, 101.0),
+            ("09:35", 101.0, 105.1, 100.5, 102.0),
+            ("09:36", 102.0, 102.2, 98.0, 99.0),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(target_r_hl=2.0), stop_type="HL")
+
+    row = result.iloc[0]
+    assert row["exit_reason"] == "target"
+    assert row["exit_price"] == 105.0
+    assert row["gross_pnl"] == 500.0
+
+
+def test_hl_short_exits_at_target_before_later_stop():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 101.0, 99.9, 99.8),
+            ("09:31", 99.8, 100.5, 99.7, 99.6),
+            ("09:32", 99.6, 100.3, 99.5, 99.4),
+            ("09:33", 99.4, 100.2, 99.3, 99.2),
+            ("09:34", 99.2, 100.1, 99.1, 99.0),
+            ("09:35", 99.0, 99.5, 94.0, 96.0),
+            ("09:36", 96.0, 102.0, 95.5, 101.0),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(target_r_hl=2.0), stop_type="HL")
+
+    row = result.iloc[0]
+    assert row["exit_reason"] == "target"
+    assert row["exit_price"] == 95.0
+    assert row["gross_pnl"] == 500.0
+
+
+def test_hl_same_bar_target_and_stop_uses_stop_first():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 100.1, 99.0, 100.2),
+            ("09:31", 100.2, 100.3, 99.5, 100.4),
+            ("09:32", 100.4, 100.5, 99.7, 100.6),
+            ("09:33", 100.6, 100.7, 99.8, 100.8),
+            ("09:34", 100.8, 100.9, 99.9, 101.0),
+            ("09:35", 101.0, 105.5, 98.5, 100.0),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(target_r_hl=2.0), stop_type="HL")
+
+    row = result.iloc[0]
+    assert row["exit_reason"] == "stop"
+    assert row["exit_price"] == 99.0
+    assert row["gross_pnl"] == -250.0
+
+
+def test_atr_has_no_target_and_exits_at_close():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 100.1, 99.9, 100.2),
+            ("09:31", 100.2, 100.3, 100.0, 100.4),
+            ("09:32", 100.4, 100.5, 100.1, 100.6),
+            ("09:33", 100.6, 100.7, 100.2, 100.8),
+            ("09:34", 100.8, 100.9, 100.3, 101.0),
+            ("09:35", 101.0, 120.0, 100.9, 119.0),
+            ("09:36", 119.0, 119.5, 118.0, 118.5),
+        ],
+    )
+
+    result = run_orb_backtest(
+        intraday,
+        base_config(),
+        stop_type="ATR",
+        atr_lookup={date(2024, 1, 2): 0.2},
+    )
+
+    row = result.iloc[0]
+    assert row["exit_reason"] == "close"
+    assert row["exit_price"] == 118.5
+
+
+def test_vwap_long_uses_opening_range_vwap_as_stop():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 101.0, 99.0, 100.0),
+            ("09:31", 100.0, 101.0, 99.0, 100.0),
+            ("09:32", 100.0, 101.0, 99.0, 100.0),
+            ("09:33", 100.0, 101.0, 99.0, 100.0),
+            ("09:34", 100.0, 101.0, 99.0, 101.0),
+            ("09:35", 102.0, 103.0, 101.0, 102.5),
+            ("09:36", 102.5, 103.0, 99.5, 100.0),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(target_r_hl=2.0), stop_type="VWAP")
+
+    row = result.iloc[0]
+    assert row["side"] == 1
+    assert row["stop_price"] == 100.2
+    assert row["exit_reason"] == "stop"
+    assert row["exit_price"] == 100.2
+
+
+def test_vwap_short_uses_opening_range_vwap_as_stop():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 101.0, 99.0, 100.0),
+            ("09:31", 100.0, 101.0, 99.0, 100.0),
+            ("09:32", 100.0, 101.0, 99.0, 100.0),
+            ("09:33", 100.0, 101.0, 99.0, 100.0),
+            ("09:34", 100.0, 101.0, 99.0, 99.0),
+            ("09:35", 98.0, 99.0, 97.0, 97.5),
+            ("09:36", 97.5, 100.5, 97.0, 100.0),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(target_r_hl=2.0), stop_type="VWAP")
+
+    row = result.iloc[0]
+    assert row["side"] == -1
+    assert row["stop_price"] == 99.8
+    assert row["exit_reason"] == "stop"
+    assert row["exit_price"] == 99.8
+
+
+def test_vwap_has_no_profit_target():
+    intraday = make_minutes(
+        "2024-01-02",
+        [
+            ("09:30", 100.0, 101.0, 99.0, 100.0),
+            ("09:31", 100.0, 101.0, 99.0, 100.0),
+            ("09:32", 100.0, 101.0, 99.0, 100.0),
+            ("09:33", 100.0, 101.0, 99.0, 100.0),
+            ("09:34", 100.0, 101.0, 99.0, 101.0),
+            ("09:35", 102.0, 130.0, 101.0, 120.0),
+            ("09:36", 120.0, 121.0, 119.0, 119.5),
+        ],
+    )
+
+    result = run_orb_backtest(intraday, base_config(target_r_hl=2.0), stop_type="VWAP")
+
+    row = result.iloc[0]
+    assert row["exit_reason"] == "close"
+    assert row["exit_price"] == 119.5

@@ -1,14 +1,15 @@
 ticker: TQQQ
-start_date: 2016-01-01
-end_date: 2026-04-20
+start_date: 2020-01-01
+end_date: latest
 orb_minutes: 5
 risk: 0.01
 max_leverage: 4.0
-initial_capital: 25000
+initial_capital: 10000
 commission: 0.0005
 atr_period: 14
 stop_atr: 0.05
+target_r_hl: 10
 intraday_path: data/alpaca/{ticker}_intraday.csv
 daily_path: data/alpaca/{ticker}_daily.csv
-output_dir: results/orb_tqqq
-active_stop_types: [HL, ATR]
+output_dir: results/orb_tqqq_2020_latest
+active_stop_types: [HL, ATR, VWAP]

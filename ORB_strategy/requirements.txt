@@ -4,3 +4,4 @@ matplotlib
 exchange-calendars
 pytest
 tabulate
+requests

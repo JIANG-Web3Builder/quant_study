@@ -13,10 +13,11 @@ class OrbConfig:
     orb_minutes: int = 5
     risk: float = 0.01
     max_leverage: float = 4.0
-    initial_capital: float = 25_000.0
+    initial_capital: float = 10_000.0
     commission: float = 0.0005
     atr_period: int = 14
     stop_atr: float = 0.05
+    target_r_hl: float | None = 10.0
     intraday_path: str = "data/alpaca/{ticker}_intraday.csv"
     daily_path: str = "data/alpaca/{ticker}_daily.csv"
     output_dir: str = "results/orb_tqqq"
@@ -91,6 +92,8 @@ def _parse_scalar(value: str) -> Any:
         return True
     if lowered == "false":
         return False
+    if lowered in {"null", "none", "~"}:
+        return None
     try:
         if any(ch in value for ch in [".", "e", "E"]):
             return float(value)

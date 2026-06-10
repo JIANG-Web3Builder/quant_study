@@ -6,7 +6,7 @@ import pandas as pd
 
 
 def filter_regular_session_bars(intraday_df: pd.DataFrame) -> pd.DataFrame:
-    """Keep bars before each NYSE session close; falls back to <=16:00 ET."""
+    """Keep regular trading hours bars, respecting early NYSE closes."""
     df = intraday_df.copy()
     if df.empty:
         return df
@@ -16,7 +16,8 @@ def filter_regular_session_bars(intraday_df: pd.DataFrame) -> pd.DataFrame:
     close_minutes = _nyse_close_minutes(set(df["day"]))
     bar_minutes = df["datetime_et"].dt.hour * 60 + df["datetime_et"].dt.minute
     thresholds = df["day"].map(close_minutes).fillna(16 * 60)
-    return df[bar_minutes < thresholds].drop(columns=["day"]).reset_index(drop=True)
+    open_minute = 9 * 60 + 30
+    return df[(bar_minutes >= open_minute) & (bar_minutes < thresholds)].drop(columns=["day"]).reset_index(drop=True)
 
 
 def _nyse_close_minutes(days: set[date]) -> dict[date, int]:

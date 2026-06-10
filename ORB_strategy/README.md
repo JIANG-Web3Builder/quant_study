@@ -1,11 +1,21 @@
 # ORB Strategy Local Backtest
 
 This folder contains a local Python implementation of the printed Colab notebook
-`Backtesting the ORB Strategy with Free Alpaca Data`.
+`Backtesting the ORB Strategy with Free Alpaca Data`. The default config runs
+the TQQQ strategy from `2020-01-01` through the latest complete Alpaca trading
+day.
 
 ## Data
 
-Place downloaded CSV files here:
+The CLI downloads Alpaca data automatically when cached CSV files are missing.
+Set credentials in the process environment first:
+
+```powershell
+$env:APCA_API_KEY_ID = "..."
+$env:APCA_API_SECRET_KEY = "..."
+```
+
+Cached files are written here:
 
 - `data/alpaca/TQQQ_intraday.csv`
 - `data/alpaca/TQQQ_daily.csv`
@@ -27,9 +37,9 @@ Daily CSV columns:
 - `low`
 - `close`
 
-The first version does not call Alpaca directly. After API access is available,
-add a downloader that writes the same CSV shape and the backtest core can remain
-unchanged.
+Intraday data is downloaded with `timeframe=1Min`, `adjustment=raw`, and
+`feed=sip`. Daily data is downloaded with `timeframe=1Day`, `adjustment=all`,
+and `feed=sip`.
 
 ## Run
 
@@ -44,7 +54,7 @@ If data is missing, the CLI prints the exact files to create.
 
 ## Outputs
 
-Results are written to `results/orb_tqqq/`:
+Results are written to `results/orb_tqqq_2020_latest/`:
 
 - `equity_hl.csv`
 - `equity_atr.csv`
@@ -57,10 +67,11 @@ Results are written to `results/orb_tqqq/`:
 ## Strategy Defaults
 
 - Ticker: `TQQQ`
-- Date range: `2016-01-01` to `2026-04-20`
+- Date range: `2020-01-01` to latest complete Alpaca trading day
 - Opening range: first 5 one-minute bars
 - Entry: next bar open
 - Position sizing: fixed 1% equity risk per trade
 - Max leverage: 4x
-- Stop modes: opening range high/low and 5% ATR
-- Profit target: none
+- Starting capital: `$10,000`
+- Stop modes: opening range high/low, 5% ATR, and opening-range VWAP
+- Profit target: 10R for opening range high/low mode; none for ATR mode
